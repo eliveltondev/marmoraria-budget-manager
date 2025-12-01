@@ -147,10 +147,10 @@ const StatusPage = () => {
                         <TableCell>{status.name}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <div 
-                              className="w-6 h-6 rounded-full border border-gray-200"
-                              style={{ backgroundColor: status.color }}
-                            />
+                          <div 
+                            className="w-6 h-6 rounded-full border"
+                            style={{ backgroundColor: status.color }}
+                          />
                             <span>{status.color}</span>
                           </div>
                         </TableCell>
@@ -169,7 +169,7 @@ const StatusPage = () => {
                               variant="outline" 
                               size="sm" 
                               onClick={() => handleDeleteStatus(status.id)}
-                              className="text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600 flex items-center gap-1"
+                              className="text-destructive border-destructive/20 hover:bg-destructive/10 hover:text-destructive flex items-center gap-1"
                             >
                               <Trash2 size={16} />
                               Excluir
@@ -193,7 +193,7 @@ const StatusPage = () => {
             <CardContent>
               <div className="space-y-4">
                 <div>
-                  <label htmlFor="statusName" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="statusName" className="block text-sm font-medium mb-1">
                     Nome do Status
                   </label>
                   <Input
@@ -211,7 +211,7 @@ const StatusPage = () => {
                 </div>
                 
                 <div>
-                  <label htmlFor="statusColor" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="statusColor" className="block text-sm font-medium mb-1">
                     Cor do Status
                   </label>
                   <div className="flex gap-3 items-center">
@@ -279,11 +279,11 @@ const StatusPage = () => {
             <CardTitle>Como usar os Status</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-gray-600 mb-4">
+            <p className="text-muted-foreground mb-4">
               Os status criados aqui serão exibidos nas opções de status de orçamento durante a criação e edição de orçamentos.
               Cada status pode ter um nome descritivo e uma cor associada para facilitar a identificação visual.
             </p>
-            <div className="bg-amber-50 border-l-4 border-amber-400 p-4 text-amber-700">
+            <div className="bg-secondary/10 border-l-4 border-secondary p-4 text-foreground">
               <p className="font-medium">Recomendações:</p>
               <ul className="list-disc list-inside mt-2 space-y-1">
                 <li>Crie status que representem claramente o estado atual do orçamento</li>

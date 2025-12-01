@@ -142,7 +142,7 @@ const MaterialsPage = () => {
                             variant="outline" 
                             size="sm" 
                             onClick={() => handleDeleteMaterial(material.id)}
-                            className="text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600"
+                            className="text-destructive border-destructive/20 hover:bg-destructive/10 hover:text-destructive"
                           >
                             Excluir
                           </Button>
