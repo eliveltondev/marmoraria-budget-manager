@@ -3,10 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import OrcamentoPage from "./pages/OrcamentoPage";
-import ContatoPage from "./pages/ContatoPage";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import NotFound from "./pages/NotFound";
 import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
@@ -16,9 +13,6 @@ import CustomersPage from "./pages/CustomersPage";
 import CustomerDetailPage from "./pages/CustomerDetailPage";
 import MaterialsPage from "./pages/MaterialsPage";
 import MaterialDetailPage from "./pages/MaterialDetailPage";
-import GaleriaPage from "./pages/GaleriaPage";
-import SobrePage from "./pages/SobrePage";
-import ServicosPage from "./pages/ServicosPage";
 import StatusPage from "./pages/StatusPage";
 
 const queryClient = new QueryClient();
@@ -30,16 +24,11 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          {/* Páginas públicas */}
-          <Route path="/" element={<Index />} />
-          <Route path="/orcamento" element={<OrcamentoPage />} />
-          <Route path="/contato" element={<ContatoPage />} />
-          <Route path="/galeria" element={<GaleriaPage />} />
-          <Route path="/sobre" element={<SobrePage />} />
-          <Route path="/servicos" element={<ServicosPage />} />
+          {/* Redirect root to login */}
+          <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/login" element={<LoginPage />} />
           
-          {/* Páginas do dashboard (protegidas) */}
+          {/* Dashboard routes */}
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/dashboard/new-order" element={<NewOrderPage />} />
           <Route path="/dashboard/orders/:id" element={<DashboardPage />} />
@@ -52,7 +41,7 @@ const App = () => (
           <Route path="/dashboard/materials/:id/edit" element={<MaterialDetailPage />} />
           <Route path="/dashboard/status" element={<StatusPage />} />
           
-          {/* Rota de fallback */}
+          {/* Fallback */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

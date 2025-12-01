@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import logo from '@/assets/logo.png';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -48,13 +49,16 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-marble-100">
+    <div className="flex items-center justify-center min-h-screen bg-primary dark-marble">
       <div className="w-full max-w-md p-4">
-        <Card className="border-t-4 border-secondary shadow-lg">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-center">Marmoraria Tech</CardTitle>
-            <CardDescription className="text-center">
-              Área restrita para colaboradores da empresa
+        <Card className="border-none shadow-2xl bg-card/95 backdrop-blur-sm">
+          <CardHeader className="space-y-4 pb-6">
+            <div className="flex justify-center">
+              <img src={logo} alt="Marmoraria Tech" className="h-24 w-auto" />
+            </div>
+            <div className="accent-line"></div>
+            <CardDescription className="text-center text-base">
+              Área restrita para colaboradores
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -68,7 +72,7 @@ const LoginPage = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="border-marble-300 focus:border-secondary focus:ring-secondary"
+                  className="bg-background border-border focus:border-secondary focus:ring-secondary"
                 />
               </div>
               <div className="space-y-2">
@@ -94,16 +98,16 @@ const LoginPage = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="border-marble-300 focus:border-secondary focus:ring-secondary"
+                  className="bg-background border-border focus:border-secondary focus:ring-secondary"
                 />
               </div>
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button type="submit" className="w-full bg-secondary hover:bg-secondary/90" disabled={isLoading}>
                 {isLoading ? "Entrando..." : "Entrar"}
               </Button>
             </form>
           </CardContent>
-          <CardFooter className="flex justify-center">
-            <p className="text-xs text-center text-gray-500">
+          <CardFooter className="flex justify-center pt-6">
+            <p className="text-xs text-center text-muted-foreground">
               &copy; {new Date().getFullYear()} Marmoraria Tech. Todos os direitos reservados.
             </p>
           </CardFooter>
