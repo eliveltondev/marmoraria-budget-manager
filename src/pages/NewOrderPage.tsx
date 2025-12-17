@@ -7,47 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { getCustomers, getMaterials, addOrder, Customer, Material } from '@/lib/dataStore';
 
-// Dados fictícios para demonstração
-const mockCustomers = [{
-  id: 1,
-  name: 'João Silva',
-  phone: '(11) 98765-4321',
-  email: 'joao@exemplo.com',
-  address: 'Rua das Flores, 123 - São Paulo/SP'
-}, {
-  id: 2,
-  name: 'Maria Oliveira',
-  phone: '(11) 91234-5678',
-  email: 'maria@exemplo.com',
-  address: 'Av. Paulista, 1000 - São Paulo/SP'
-}, {
-  id: 3,
-  name: 'Carlos Santos',
-  phone: '(11) 99876-5432',
-  email: 'carlos@exemplo.com',
-  address: 'Rua Augusta, 500 - São Paulo/SP'
-}];
-const mockMaterials = [{
-  id: 1,
-  name: 'Mármore Carrara',
-  type: 'Mármore',
-  price: 350.00,
-  stock: 50
-}, {
-  id: 2,
-  name: 'Granito Preto São Gabriel',
-  type: 'Granito',
-  price: 280.00,
-  stock: 35
-}, {
-  id: 3,
-  name: 'Quartzo Branco',
-  type: 'Quartzo',
-  price: 420.00,
-  stock: 25
-}];
 const NewOrderPage = () => {
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [materials, setMaterials] = useState<Material[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState('');
   const [selectedMaterials, setSelectedMaterials] = useState<{
     id: string;
@@ -56,13 +20,10 @@ const NewOrderPage = () => {
     height: number;
     depth?: number;
   }[]>([]);
-  const [description, setDescription] = useState('');
-  const [value, setValue] = useState('');
   const [deliveryDate, setDeliveryDate] = useState('');
   const [status, setStatus] = useState('Aberto');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Novos campos
   const [customerInfo, setCustomerInfo] = useState({
     name: '',
     phone: '',
@@ -73,11 +34,9 @@ const NewOrderPage = () => {
   const [discount, setDiscount] = useState('');
   const [installationCost, setInstallationCost] = useState('');
   const navigate = useNavigate();
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
+
   useEffect(() => {
-    // Verificar autenticação
     const authUser = localStorage.getItem('authUser');
     if (!authUser) {
       navigate('/login');
@@ -86,13 +45,16 @@ const NewOrderPage = () => {
         description: "Faça login para acessar o sistema",
         variant: "destructive"
       });
+      return;
     }
+    // Load data from dataStore
+    setCustomers(getCustomers());
+    setMaterials(getMaterials());
   }, [navigate, toast]);
 
-  // Atualizar informações do cliente quando um cliente é selecionado
   useEffect(() => {
     if (selectedCustomer) {
-      const customer = mockCustomers.find(c => c.id.toString() === selectedCustomer);
+      const customer = customers.find(c => c.id.toString() === selectedCustomer);
       if (customer) {
         setCustomerInfo({
           name: customer.name,
@@ -109,8 +71,9 @@ const NewOrderPage = () => {
         address: ''
       });
     }
-  }, [selectedCustomer]);
-  const addMaterial = () => {
+  }, [selectedCustomer, customers]);
+
+  const addMaterialToList = () => {
     setSelectedMaterials([...selectedMaterials, {
       id: '',
       quantity: 1,
@@ -119,12 +82,14 @@ const NewOrderPage = () => {
       depth: 0
     }]);
   };
+
   const removeMaterial = (index: number) => {
     const updatedMaterials = [...selectedMaterials];
     updatedMaterials.splice(index, 1);
     setSelectedMaterials(updatedMaterials);
   };
-  const updateMaterial = (index: number, field: string, value: string | number) => {
+
+  const updateMaterialItem = (index: number, field: string, value: string | number) => {
     const updatedMaterials = [...selectedMaterials];
     updatedMaterials[index] = {
       ...updatedMaterials[index],
@@ -133,52 +98,50 @@ const NewOrderPage = () => {
     setSelectedMaterials(updatedMaterials);
   };
 
-  // Calcular o subtotal de um material
   const calculateSubtotal = (materialId: string, quantity: number, width: number, height: number) => {
-    const material = mockMaterials.find(m => m.id.toString() === materialId);
+    const material = materials.find(m => m.id.toString() === materialId);
     if (!material) return 0;
     const area = width * height;
     return material.price * area * quantity;
   };
 
-  // Calcular o total do orçamento
   const calculateTotal = () => {
     let total = 0;
-
-    // Somar valor dos materiais
     selectedMaterials.forEach(material => {
       if (material.id) {
         total += calculateSubtotal(material.id, material.quantity, material.width, material.height);
       }
     });
-
-    // Adicionar frete
-    if (shippingCost) {
-      total += parseFloat(shippingCost);
-    }
-
-    // Adicionar instalação
-    if (installationCost) {
-      total += parseFloat(installationCost);
-    }
-
-    // Aplicar desconto
-    if (discount) {
-      total -= parseFloat(discount);
-    }
+    if (shippingCost) total += parseFloat(shippingCost);
+    if (installationCost) total += parseFloat(installationCost);
+    if (discount) total -= parseFloat(discount);
     return total.toFixed(2);
   };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      // Simulação de envio de dados - será substituído pela integração real
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const customer = customers.find(c => c.id.toString() === selectedCustomer);
+      const today = new Date().toISOString().split('T')[0];
+      
+      addOrder({
+        customer: customer?.name || 'Cliente não identificado',
+        customerId: customer?.id,
+        date: today,
+        status: status,
+        value: `R$ ${calculateTotal()}`,
+        materials: selectedMaterials,
+        shippingCost: shippingCost ? parseFloat(shippingCost) : undefined,
+        installationCost: installationCost ? parseFloat(installationCost) : undefined,
+        discount: discount ? parseFloat(discount) : undefined,
+      });
+
       toast({
         title: "Orçamento criado",
         description: "O orçamento foi criado com sucesso"
       });
-      navigate('/dashboard');
+      navigate('/dashboard/orcamentos');
     } catch (error) {
       toast({
         title: "Erro ao criar orçamento",
@@ -189,11 +152,13 @@ const NewOrderPage = () => {
       setIsLoading(false);
     }
   };
-  return <DashboardLayout>
+
+  return (
+    <DashboardLayout>
       <div className="p-6">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Orçamento</h1>
-          <Button variant="outline" onClick={() => navigate('/dashboard')}>
+          <h1 className="text-2xl font-bold">Novo Orçamento</h1>
+          <Button variant="outline" onClick={() => navigate('/dashboard/orcamentos')}>
             Voltar
           </Button>
         </div>
@@ -212,9 +177,11 @@ const NewOrderPage = () => {
                     <SelectValue placeholder="Selecione um cliente" />
                   </SelectTrigger>
                   <SelectContent>
-                    {mockCustomers.map(customer => <SelectItem key={customer.id} value={customer.id.toString()}>
+                    {customers.map(customer => (
+                      <SelectItem key={customer.id} value={customer.id.toString()}>
                         {customer.name}
-                      </SelectItem>)}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <Button type="button" variant="link" className="p-0 h-auto" onClick={() => navigate('/dashboard/customers/new')}>
@@ -223,70 +190,77 @@ const NewOrderPage = () => {
               </div>
 
               {/* Informações do Cliente */}
-              {selectedCustomer && <Card className="border border-gray-200">
+              {selectedCustomer && (
+                <Card className="border border-border">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm">Informações do Cliente</CardTitle>
                   </CardHeader>
                   <CardContent className="pt-0">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <Label className="text-xs text-gray-500">Nome</Label>
+                        <Label className="text-xs text-muted-foreground">Nome</Label>
                         <p className="text-sm">{customerInfo.name}</p>
                       </div>
                       <div>
-                        <Label className="text-xs text-gray-500">Telefone</Label>
+                        <Label className="text-xs text-muted-foreground">Telefone</Label>
                         <p className="text-sm">{customerInfo.phone}</p>
                       </div>
                       <div>
-                        <Label className="text-xs text-gray-500">Email</Label>
+                        <Label className="text-xs text-muted-foreground">Email</Label>
                         <p className="text-sm">{customerInfo.email}</p>
                       </div>
                       <div>
-                        <Label className="text-xs text-gray-500">Endereço</Label>
+                        <Label className="text-xs text-muted-foreground">Endereço</Label>
                         <p className="text-sm">{customerInfo.address}</p>
                       </div>
                     </div>
                   </CardContent>
-                </Card>}
+                </Card>
+              )}
 
               {/* Materiais */}
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <Label>Materiais</Label>
-                  <Button type="button" variant="outline" size="sm" onClick={addMaterial}>
+                  <Button type="button" variant="outline" size="sm" onClick={addMaterialToList}>
                     + Adicionar Material
                   </Button>
                 </div>
                 
-                {selectedMaterials.length === 0 && <div className="text-sm text-muted-foreground py-2">
+                {selectedMaterials.length === 0 && (
+                  <div className="text-sm text-muted-foreground py-2">
                     Nenhum material selecionado. Clique em "+ Adicionar Material" para começar.
-                  </div>}
+                  </div>
+                )}
 
-                {selectedMaterials.map((material, index) => <div key={index} className="grid grid-cols-12 gap-4 items-end py-2 border-b border-gray-100">
+                {selectedMaterials.map((material, index) => (
+                  <div key={index} className="grid grid-cols-12 gap-4 items-end py-2 border-b border-border">
                     <div className="col-span-12 md:col-span-3">
                       <Label htmlFor={`material-${index}`}>Material</Label>
-                      <Select value={material.id} onValueChange={value => updateMaterial(index, 'id', value)}>
+                      <Select value={material.id} onValueChange={value => updateMaterialItem(index, 'id', value)}>
                         <SelectTrigger id={`material-${index}`}>
                           <SelectValue placeholder="Selecione um material" />
                         </SelectTrigger>
                         <SelectContent>
-                          {mockMaterials.map(m => <SelectItem key={m.id} value={m.id.toString()}>
+                          {materials.map(m => (
+                            <SelectItem key={m.id} value={m.id.toString()}>
                               {m.name} - R$ {m.price.toFixed(2)}
-                            </SelectItem>)}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="col-span-4 md:col-span-1">
                       <Label htmlFor={`quantity-${index}`}>Qtd</Label>
-                      <Input id={`quantity-${index}`} type="number" min="1" value={material.quantity} onChange={e => updateMaterial(index, 'quantity', parseInt(e.target.value))} />
+                      <Input id={`quantity-${index}`} type="number" min="1" value={material.quantity} onChange={e => updateMaterialItem(index, 'quantity', parseInt(e.target.value))} />
                     </div>
                     <div className="col-span-4 md:col-span-2">
                       <Label htmlFor={`width-${index}`}>Largura (m)</Label>
-                      <Input id={`width-${index}`} type="number" step="0.01" min="0" value={material.width || ''} onChange={e => updateMaterial(index, 'width', parseFloat(e.target.value))} />
+                      <Input id={`width-${index}`} type="number" step="0.01" min="0" value={material.width || ''} onChange={e => updateMaterialItem(index, 'width', parseFloat(e.target.value))} />
                     </div>
                     <div className="col-span-4 md:col-span-2">
                       <Label htmlFor={`height-${index}`}>Altura (m)</Label>
-                      <Input id={`height-${index}`} type="number" step="0.01" min="0" value={material.height || ''} onChange={e => updateMaterial(index, 'height', parseFloat(e.target.value))} />
+                      <Input id={`height-${index}`} type="number" step="0.01" min="0" value={material.height || ''} onChange={e => updateMaterialItem(index, 'height', parseFloat(e.target.value))} />
                     </div>
                     <div className="col-span-8 md:col-span-2">
                       <Label>Área Total</Label>
@@ -305,11 +279,9 @@ const NewOrderPage = () => {
                         Remover
                       </Button>
                     </div>
-                  </div>)}
+                  </div>
+                ))}
               </div>
-
-              {/* Descrição */}
-              
 
               {/* Custos Adicionais */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -358,7 +330,7 @@ const NewOrderPage = () => {
 
               {/* Botões */}
               <div className="flex justify-end space-x-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => navigate('/dashboard')}>
+                <Button type="button" variant="outline" onClick={() => navigate('/dashboard/orcamentos')}>
                   Cancelar
                 </Button>
                 <Button type="submit" disabled={isLoading}>
@@ -369,6 +341,8 @@ const NewOrderPage = () => {
           </CardContent>
         </Card>
       </div>
-    </DashboardLayout>;
+    </DashboardLayout>
+  );
 };
+
 export default NewOrderPage;

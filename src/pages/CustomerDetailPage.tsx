@@ -7,37 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import DashboardLayout from '@/components/DashboardLayout';
-
-// Dados fictícios para demonstração
-const mockCustomers = [
-  { 
-    id: 1, 
-    name: 'João Silva', 
-    phone: '(11) 98765-4321', 
-    email: 'joao@exemplo.com',
-    address: 'Rua das Flores, 123 - São Paulo/SP',
-    document: '123.456.789-00',
-    totalSpent: 'R$ 5.800,00'
-  },
-  { 
-    id: 2, 
-    name: 'Maria Oliveira', 
-    phone: '(11) 91234-5678', 
-    email: 'maria@exemplo.com',
-    address: 'Av. Paulista, 1000 - São Paulo/SP',
-    document: '987.654.321-00',
-    totalSpent: 'R$ 3.200,00'
-  },
-  { 
-    id: 3, 
-    name: 'Carlos Santos', 
-    phone: '(11) 99876-5432', 
-    email: 'carlos@exemplo.com',
-    address: 'Rua Augusta, 500 - São Paulo/SP',
-    document: '456.789.123-00',
-    totalSpent: 'R$ 1.800,00'
-  },
-];
+import { getCustomerById, addCustomer, updateCustomer } from '@/lib/dataStore';
 
 const CustomerDetailPage = () => {
   const { id } = useParams();
@@ -56,7 +26,6 @@ const CustomerDetailPage = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    // Verificar autenticação
     const authUser = localStorage.getItem('authUser');
     if (!authUser) {
       navigate('/login');
@@ -68,9 +37,8 @@ const CustomerDetailPage = () => {
       return;
     }
 
-    // Carregar dados do cliente se não for um novo cliente
     if (!isNewCustomer) {
-      const customer = mockCustomers.find(c => c.id === parseInt(id || '0'));
+      const customer = getCustomerById(parseInt(id || '0'));
       if (customer) {
         setFormData({
           name: customer.name,
@@ -100,8 +68,11 @@ const CustomerDetailPage = () => {
     setIsLoading(true);
 
     try {
-      // Simulação de envio de dados - será substituído pela integração real
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (isNewCustomer) {
+        addCustomer(formData);
+      } else {
+        updateCustomer(parseInt(id || '0'), formData);
+      }
       
       toast({
         title: isNewCustomer ? "Cliente cadastrado" : "Cliente atualizado",

@@ -8,37 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import DashboardLayout from '@/components/DashboardLayout';
-
-// Dados fictícios para demonstração
-const mockMaterials = [
-  { 
-    id: 1, 
-    name: 'Mármore Carrara', 
-    type: 'Mármore', 
-    price: 350.00,
-    stock: 50,
-    unit: 'm²',
-    description: 'Mármore branco de alta qualidade, importado da Itália.'
-  },
-  { 
-    id: 2, 
-    name: 'Granito Preto São Gabriel', 
-    type: 'Granito', 
-    price: 280.00,
-    stock: 35,
-    unit: 'm²',
-    description: 'Granito nacional de cor preta com pequenos cristais.'
-  },
-  { 
-    id: 3, 
-    name: 'Quartzo Branco', 
-    type: 'Quartzo', 
-    price: 420.00,
-    stock: 25,
-    unit: 'm²',
-    description: 'Quartzo branco com alta resistência a manchas e riscos.'
-  },
-];
+import { getMaterialById, addMaterial, updateMaterial } from '@/lib/dataStore';
 
 const materialTypes = ['Mármore', 'Granito', 'Quartzo', 'Porcelanato', 'Outro'];
 const unitTypes = ['m²', 'unidade', 'metro linear'];
@@ -61,7 +31,6 @@ const MaterialDetailPage = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    // Verificar autenticação
     const authUser = localStorage.getItem('authUser');
     if (!authUser) {
       navigate('/login');
@@ -73,9 +42,8 @@ const MaterialDetailPage = () => {
       return;
     }
 
-    // Carregar dados do material se não for um novo material
     if (!isNewMaterial) {
-      const material = mockMaterials.find(m => m.id === parseInt(id || '0'));
+      const material = getMaterialById(parseInt(id || '0'));
       if (material) {
         setFormData({
           name: material.name,
@@ -110,8 +78,20 @@ const MaterialDetailPage = () => {
     setIsLoading(true);
 
     try {
-      // Simulação de envio de dados - será substituído pela integração real
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const materialData = {
+        name: formData.name,
+        type: formData.type,
+        price: parseFloat(formData.price),
+        stock: parseFloat(formData.stock),
+        unit: formData.unit,
+        description: formData.description,
+      };
+
+      if (isNewMaterial) {
+        addMaterial(materialData);
+      } else {
+        updateMaterial(parseInt(id || '0'), materialData);
+      }
       
       toast({
         title: isNewMaterial ? "Material cadastrado" : "Material atualizado",
