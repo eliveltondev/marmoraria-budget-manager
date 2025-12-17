@@ -43,7 +43,7 @@ const CustomerDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const isNewCustomer = id === 'new';
+  const isNewCustomer = !id || id === 'new';
   
   const [formData, setFormData] = useState({
     name: '',
