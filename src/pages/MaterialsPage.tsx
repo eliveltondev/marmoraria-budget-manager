@@ -7,48 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import DashboardLayout from '@/components/DashboardLayout';
-
-// Dados fictícios para demonstração
-const mockMaterials = [
-  { 
-    id: 1, 
-    name: 'Mármore Carrara', 
-    type: 'Mármore', 
-    price: 'R$ 350,00',
-    stock: 50
-  },
-  { 
-    id: 2, 
-    name: 'Granito Preto São Gabriel', 
-    type: 'Granito', 
-    price: 'R$ 280,00',
-    stock: 35
-  },
-  { 
-    id: 3, 
-    name: 'Quartzo Branco', 
-    type: 'Quartzo', 
-    price: 'R$ 420,00',
-    stock: 25
-  },
-  { 
-    id: 4, 
-    name: 'Mármore Travertino', 
-    type: 'Mármore', 
-    price: 'R$ 300,00',
-    stock: 40
-  },
-  { 
-    id: 5, 
-    name: 'Granito Verde Ubatuba', 
-    type: 'Granito', 
-    price: 'R$ 260,00',
-    stock: 30
-  },
-];
+import { getMaterials, deleteMaterial, Material } from '@/lib/dataStore';
 
 const MaterialsPage = () => {
-  const [materials, setMaterials] = useState(mockMaterials);
+  const [materials, setMaterials] = useState<Material[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -59,7 +21,6 @@ const MaterialsPage = () => {
   );
 
   useEffect(() => {
-    // Verificar autenticação
     const authUser = localStorage.getItem('authUser');
     if (!authUser) {
       navigate('/login');
@@ -68,12 +29,16 @@ const MaterialsPage = () => {
         description: "Faça login para acessar o sistema",
         variant: "destructive",
       });
+      return;
     }
+    // Load materials from dataStore
+    setMaterials(getMaterials());
   }, [navigate, toast]);
 
   const handleDeleteMaterial = (id: number) => {
     if (window.confirm('Tem certeza que deseja excluir este material?')) {
-      setMaterials(materials.filter(material => material.id !== id));
+      deleteMaterial(id);
+      setMaterials(getMaterials());
       toast({
         title: "Material excluído",
         description: "O material foi excluído com sucesso",
@@ -127,7 +92,7 @@ const MaterialsPage = () => {
                     <TableRow key={material.id}>
                       <TableCell>{material.name}</TableCell>
                       <TableCell>{material.type}</TableCell>
-                      <TableCell>{material.price}</TableCell>
+                      <TableCell>R$ {material.price.toFixed(2)}</TableCell>
                       <TableCell>{material.stock}</TableCell>
                       <TableCell>
                         <div className="flex space-x-2">

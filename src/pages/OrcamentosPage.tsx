@@ -6,13 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import DashboardLayout from '@/components/DashboardLayout';
-
-const mockOrders = [
-  { id: 1, customer: 'João Silva', date: '2023-10-15', status: 'Aberto', value: 'R$ 2.500,00' },
-  { id: 2, customer: 'Maria Oliveira', date: '2023-10-14', status: 'Em Andamento', value: 'R$ 3.200,00' },
-  { id: 3, customer: 'Carlos Santos', date: '2023-10-12', status: 'Finalizado', value: 'R$ 1.800,00' },
-  { id: 4, customer: 'Ana Ferreira', date: '2023-10-10', status: 'Aberto', value: 'R$ 4.100,00' },
-];
+import { getOrders, deleteOrder, Order } from '@/lib/dataStore';
 
 const statusClass = (status: string) => {
   switch (status) {
@@ -28,7 +22,7 @@ const statusClass = (status: string) => {
 };
 
 const OrcamentosPage = () => {
-  const [orders, setOrders] = useState(mockOrders);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -47,12 +41,16 @@ const OrcamentosPage = () => {
         description: "Faça login para acessar o sistema",
         variant: "destructive",
       });
+      return;
     }
+    // Load orders from dataStore
+    setOrders(getOrders());
   }, [navigate, toast]);
 
   const handleDeleteOrder = (id: number) => {
     if (window.confirm('Tem certeza que deseja excluir este orçamento?')) {
-      setOrders(orders.filter(order => order.id !== id));
+      deleteOrder(id);
+      setOrders(getOrders());
       toast({
         title: "Orçamento excluído",
         description: "O orçamento foi excluído com sucesso",

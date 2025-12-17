@@ -7,40 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import DashboardLayout from '@/components/DashboardLayout';
-
-// Dados fictícios para demonstração
-const mockCustomers = [
-  { 
-    id: 1, 
-    name: 'João Silva', 
-    phone: '(11) 98765-4321', 
-    email: 'joao@exemplo.com',
-    address: 'Rua das Flores, 123 - São Paulo/SP',
-    document: '123.456.789-00',
-    totalSpent: 'R$ 5.800,00'
-  },
-  { 
-    id: 2, 
-    name: 'Maria Oliveira', 
-    phone: '(11) 91234-5678', 
-    email: 'maria@exemplo.com',
-    address: 'Av. Paulista, 1000 - São Paulo/SP',
-    document: '987.654.321-00',
-    totalSpent: 'R$ 3.200,00'
-  },
-  { 
-    id: 3, 
-    name: 'Carlos Santos', 
-    phone: '(11) 99876-5432', 
-    email: 'carlos@exemplo.com',
-    address: 'Rua Augusta, 500 - São Paulo/SP',
-    document: '456.789.123-00',
-    totalSpent: 'R$ 1.800,00'
-  },
-];
+import { getCustomers, deleteCustomer, Customer } from '@/lib/dataStore';
 
 const CustomersPage = () => {
-  const [customers, setCustomers] = useState(mockCustomers);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -52,7 +22,6 @@ const CustomersPage = () => {
   );
 
   useEffect(() => {
-    // Verificar autenticação
     const authUser = localStorage.getItem('authUser');
     if (!authUser) {
       navigate('/login');
@@ -61,12 +30,16 @@ const CustomersPage = () => {
         description: "Faça login para acessar o sistema",
         variant: "destructive",
       });
+      return;
     }
+    // Load customers from dataStore
+    setCustomers(getCustomers());
   }, [navigate, toast]);
 
   const handleDeleteCustomer = (id: number) => {
     if (window.confirm('Tem certeza que deseja excluir este cliente?')) {
-      setCustomers(customers.filter(customer => customer.id !== id));
+      deleteCustomer(id);
+      setCustomers(getCustomers());
       toast({
         title: "Cliente excluído",
         description: "O cliente foi excluído com sucesso",
