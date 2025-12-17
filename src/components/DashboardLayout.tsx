@@ -34,6 +34,9 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   };
 
   const isActive = (path: string) => {
+    if (path === '/dashboard') {
+      return location.pathname === '/dashboard';
+    }
     return location.pathname.startsWith(path);
   };
 
@@ -47,8 +50,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     { 
       icon: FileText, 
       label: 'Orçamentos', 
-      href: '/dashboard',
-      onClick: () => navigate('/dashboard')
+      href: '/dashboard/orcamentos',
+      onClick: () => navigate('/dashboard/orcamentos')
     },
     { 
       icon: Users, 

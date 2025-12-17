@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -7,6 +6,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import NotFound from "./pages/NotFound";
 import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
+import OrcamentosPage from "./pages/OrcamentosPage";
+import OrderDetailPage from "./pages/OrderDetailPage";
 import NewOrderPage from "./pages/NewOrderPage";
 import OrderEditPage from "./pages/OrderEditPage";
 import CustomersPage from "./pages/CustomersPage";
@@ -30,9 +31,10 @@ const App = () => (
           
           {/* Dashboard routes */}
           <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/dashboard/new-order" element={<NewOrderPage />} />
-          <Route path="/dashboard/orders/:id" element={<DashboardPage />} />
+          <Route path="/dashboard/orcamentos" element={<OrcamentosPage />} />
+          <Route path="/dashboard/orders/:id" element={<OrderDetailPage />} />
           <Route path="/dashboard/orders/:id/edit" element={<OrderEditPage />} />
+          <Route path="/dashboard/new-order" element={<NewOrderPage />} />
           <Route path="/dashboard/customers" element={<CustomersPage />} />
           <Route path="/dashboard/customers/new" element={<CustomerDetailPage />} />
           <Route path="/dashboard/customers/:id" element={<CustomerDetailPage />} />

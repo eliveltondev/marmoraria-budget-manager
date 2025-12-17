@@ -47,7 +47,7 @@ const MaterialDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const isNewMaterial = id === 'new';
+  const isNewMaterial = !id || id === 'new';
   
   const [formData, setFormData] = useState({
     name: '',
