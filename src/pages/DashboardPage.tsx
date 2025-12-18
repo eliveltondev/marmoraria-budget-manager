@@ -1,40 +1,23 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import DashboardLayout from '@/components/DashboardLayout';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
-
-const mockOrders = [
-  { id: 1, customer: 'João Silva', date: '2023-10-15', status: 'Aberto', value: 2500 },
-  { id: 2, customer: 'Maria Oliveira', date: '2023-10-14', status: 'Em Andamento', value: 3200 },
-  { id: 3, customer: 'Carlos Santos', date: '2023-10-12', status: 'Finalizado', value: 1800 },
-  { id: 4, customer: 'Ana Ferreira', date: '2023-10-10', status: 'Aberto', value: 4100 },
-  { id: 5, customer: 'Pedro Lima', date: '2023-10-08', status: 'Finalizado', value: 2900 },
-  { id: 6, customer: 'Lucia Costa', date: '2023-10-05', status: 'Em Andamento', value: 3600 },
-];
-
-const monthlyData = [
-  { month: 'Jul', valor: 12500 },
-  { month: 'Ago', valor: 18200 },
-  { month: 'Set', valor: 15800 },
-  { month: 'Out', valor: 21000 },
-];
+import { getOrders, Order } from '@/lib/dataStore';
 
 const COLORS = ['hsl(45, 93%, 47%)', 'hsl(210, 100%, 50%)', 'hsl(142, 76%, 36%)'];
 
+// Parse Brazilian currency string to number
+const parseValue = (value: string): number => {
+  if (!value) return 0;
+  return parseFloat(value.replace('R$', '').replace(/\./g, '').replace(',', '.').trim()) || 0;
+};
+
 const DashboardPage = () => {
-  const [orders] = useState(mockOrders);
+  const [orders, setOrders] = useState<Order[]>([]);
   const navigate = useNavigate();
   const { toast } = useToast();
-
-  const statusData = [
-    { name: 'Aberto', value: orders.filter(o => o.status === 'Aberto').length },
-    { name: 'Em Andamento', value: orders.filter(o => o.status === 'Em Andamento').length },
-    { name: 'Finalizado', value: orders.filter(o => o.status === 'Finalizado').length },
-  ];
-
-  const totalValue = orders.reduce((sum, o) => sum + o.value, 0);
 
   useEffect(() => {
     const authUser = localStorage.getItem('authUser');
@@ -45,8 +28,31 @@ const DashboardPage = () => {
         description: "Faça login para acessar o dashboard",
         variant: "destructive",
       });
+    } else {
+      setOrders(getOrders());
     }
   }, [navigate, toast]);
+
+  const statusData = useMemo(() => [
+    { name: 'Aberto', value: orders.filter(o => o.status === 'Aberto').length },
+    { name: 'Em Andamento', value: orders.filter(o => o.status === 'Em Andamento').length },
+    { name: 'Finalizado', value: orders.filter(o => o.status === 'Finalizado').length },
+  ], [orders]);
+
+  const totalValue = useMemo(() => 
+    orders.reduce((sum, o) => sum + parseValue(o.value), 0), 
+    [orders]
+  );
+
+  const monthlyData = useMemo(() => {
+    const months: { [key: string]: number } = {};
+    orders.forEach(order => {
+      const date = new Date(order.date);
+      const monthKey = date.toLocaleDateString('pt-BR', { month: 'short' });
+      months[monthKey] = (months[monthKey] || 0) + parseValue(order.value);
+    });
+    return Object.entries(months).map(([month, valor]) => ({ month, valor }));
+  }, [orders]);
 
   return (
     <DashboardLayout>
@@ -98,7 +104,7 @@ const DashboardPage = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                R$ {totalValue.toLocaleString('pt-BR')}
+                R$ {totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
             </CardContent>
           </Card>
@@ -111,17 +117,23 @@ const DashboardPage = () => {
             </CardHeader>
             <CardContent>
               <div className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={monthlyData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip 
-                      formatter={(value: number) => [`R$ ${value.toLocaleString('pt-BR')}`, 'Valor']}
-                    />
-                    <Bar dataKey="valor" fill="hsl(210, 100%, 50%)" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                {monthlyData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={monthlyData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="month" />
+                      <YAxis />
+                      <Tooltip 
+                        formatter={(value: number) => [`R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 'Valor']}
+                      />
+                      <Bar dataKey="valor" fill="hsl(210, 100%, 50%)" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex items-center justify-center h-full text-muted-foreground">
+                    Nenhum dado disponível
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -132,26 +144,32 @@ const DashboardPage = () => {
             </CardHeader>
             <CardContent>
               <div className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={statusData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      outerRadius={100}
-                      fill="#8884d8"
-                      dataKey="value"
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    >
-                      {statusData.map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
+                {orders.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={statusData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        outerRadius={100}
+                        fill="#8884d8"
+                        dataKey="value"
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      >
+                        {statusData.map((_, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex items-center justify-center h-full text-muted-foreground">
+                    Nenhum orçamento cadastrado
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
