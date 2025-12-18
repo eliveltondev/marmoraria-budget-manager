@@ -5,58 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import DashboardLayout from '@/components/DashboardLayout';
-
-// Dados fictícios para demonstração
-const mockOrders = [
-  { 
-    id: 1, 
-    customer: 'João Silva', 
-    date: '2023-10-15', 
-    status: 'Aberto', 
-    value: 'R$ 2.500,00',
-    items: [
-      { material: 'Mármore Carrara', quantity: 5, unit: 'm²', unitPrice: 'R$ 350,00', total: 'R$ 1.750,00' },
-      { material: 'Instalação', quantity: 1, unit: 'serviço', unitPrice: 'R$ 750,00', total: 'R$ 750,00' },
-    ],
-    notes: 'Cliente solicitou entrega urgente.'
-  },
-  { 
-    id: 2, 
-    customer: 'Maria Oliveira', 
-    date: '2023-10-14', 
-    status: 'Em Andamento', 
-    value: 'R$ 3.200,00',
-    items: [
-      { material: 'Granito Preto São Gabriel', quantity: 8, unit: 'm²', unitPrice: 'R$ 280,00', total: 'R$ 2.240,00' },
-      { material: 'Polimento', quantity: 1, unit: 'serviço', unitPrice: 'R$ 960,00', total: 'R$ 960,00' },
-    ],
-    notes: ''
-  },
-  { 
-    id: 3, 
-    customer: 'Carlos Santos', 
-    date: '2023-10-12', 
-    status: 'Finalizado', 
-    value: 'R$ 1.800,00',
-    items: [
-      { material: 'Quartzo Branco', quantity: 3, unit: 'm²', unitPrice: 'R$ 420,00', total: 'R$ 1.260,00' },
-      { material: 'Instalação', quantity: 1, unit: 'serviço', unitPrice: 'R$ 540,00', total: 'R$ 540,00' },
-    ],
-    notes: 'Concluído dentro do prazo.'
-  },
-  { 
-    id: 4, 
-    customer: 'Ana Ferreira', 
-    date: '2023-10-10', 
-    status: 'Aberto', 
-    value: 'R$ 4.100,00',
-    items: [
-      { material: 'Mármore Travertino', quantity: 10, unit: 'm²', unitPrice: 'R$ 300,00', total: 'R$ 3.000,00' },
-      { material: 'Instalação', quantity: 1, unit: 'serviço', unitPrice: 'R$ 1.100,00', total: 'R$ 1.100,00' },
-    ],
-    notes: 'Aguardando confirmação do cliente.'
-  },
-];
+import { getOrderById, getCustomerById, getMaterialById, Order } from '@/lib/dataStore';
 
 const statusVariant = (status: string) => {
   switch (status) {
@@ -75,7 +24,8 @@ const OrderDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [order, setOrder] = useState<typeof mockOrders[0] | null>(null);
+  const [order, setOrder] = useState<Order | null>(null);
+  const [customerName, setCustomerName] = useState<string>('');
 
   useEffect(() => {
     const authUser = localStorage.getItem('authUser');
@@ -89,9 +39,23 @@ const OrderDetailPage = () => {
       return;
     }
 
-    const foundOrder = mockOrders.find(o => o.id === parseInt(id || '0'));
+    const orderId = parseInt(id || '0');
+    const foundOrder = getOrderById(orderId);
+    
     if (foundOrder) {
       setOrder(foundOrder);
+      
+      // Get customer name if customerId exists
+      if (foundOrder.customerId) {
+        const customer = getCustomerById(foundOrder.customerId);
+        if (customer) {
+          setCustomerName(customer.name);
+        } else {
+          setCustomerName(foundOrder.customer);
+        }
+      } else {
+        setCustomerName(foundOrder.customer);
+      }
     } else {
       toast({
         title: "Orçamento não encontrado",
@@ -101,6 +65,13 @@ const OrderDetailPage = () => {
       navigate('/dashboard/orcamentos');
     }
   }, [id, navigate, toast]);
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
+  };
 
   if (!order) {
     return (
@@ -136,7 +107,7 @@ const OrderDetailPage = () => {
               <CardTitle>Informações do Cliente</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <p><strong>Cliente:</strong> {order.customer}</p>
+              <p><strong>Cliente:</strong> {customerName}</p>
               <p><strong>Data:</strong> {order.date}</p>
             </CardContent>
           </Card>
@@ -152,45 +123,58 @@ const OrderDetailPage = () => {
           </Card>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Itens do Orçamento</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 px-2">Material</th>
-                    <th className="text-left py-3 px-2">Quantidade</th>
-                    <th className="text-left py-3 px-2">Unidade</th>
-                    <th className="text-left py-3 px-2">Preço Unit.</th>
-                    <th className="text-left py-3 px-2">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {order.items.map((item, index) => (
-                    <tr key={index} className="border-b">
-                      <td className="py-3 px-2">{item.material}</td>
-                      <td className="py-3 px-2">{item.quantity}</td>
-                      <td className="py-3 px-2">{item.unit}</td>
-                      <td className="py-3 px-2">{item.unitPrice}</td>
-                      <td className="py-3 px-2">{item.total}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-
-        {order.notes && (
+        {order.materials && order.materials.length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle>Observações</CardTitle>
+              <CardTitle>Itens do Orçamento</CardTitle>
             </CardHeader>
             <CardContent>
-              <p>{order.notes}</p>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-3 px-2">Material</th>
+                      <th className="text-left py-3 px-2">Descrição</th>
+                      <th className="text-left py-3 px-2">Dimensões</th>
+                      <th className="text-left py-3 px-2">Qtd</th>
+                      <th className="text-left py-3 px-2">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {order.materials.map((item, index) => {
+                      const material = item.materialId ? getMaterialById(item.materialId) : null;
+                      return (
+                        <tr key={index} className="border-b">
+                          <td className="py-3 px-2">{material?.name || item.materialName || 'Material'}</td>
+                          <td className="py-3 px-2">{item.description || '-'}</td>
+                          <td className="py-3 px-2">{item.length}m × {item.width}m</td>
+                          <td className="py-3 px-2">{item.quantity}</td>
+                          <td className="py-3 px-2">{formatCurrency(item.subtotal || 0)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {(order.shippingCost || order.installationCost || order.discount) && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Custos Adicionais</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {order.shippingCost && order.shippingCost > 0 && (
+                <p><strong>Frete:</strong> {formatCurrency(order.shippingCost)}</p>
+              )}
+              {order.installationCost && order.installationCost > 0 && (
+                <p><strong>Instalação:</strong> {formatCurrency(order.installationCost)}</p>
+              )}
+              {order.discount && order.discount > 0 && (
+                <p><strong>Desconto:</strong> {formatCurrency(order.discount)}</p>
+              )}
             </CardContent>
           </Card>
         )}
