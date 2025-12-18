@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -8,39 +7,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import DashboardLayout from '@/components/DashboardLayout';
-import { Printer } from 'lucide-react';
-
-// Mock data - would be replaced with actual API calls
-const mockCustomers = [
-  { id: 1, name: 'João Silva', phone: '(11) 99999-1234', email: 'joao@example.com', address: 'Rua das Flores, 123 - São Paulo/SP' },
-  { id: 2, name: 'Maria Oliveira', phone: '(11) 98765-4321', email: 'maria@example.com', address: 'Av. Principal, 456 - São Paulo/SP' },
-  { id: 3, name: 'Carlos Santos', phone: '(11) 91234-5678', email: 'carlos@example.com', address: 'Rua Secundária, 789 - São Paulo/SP' },
-];
-
-const mockMaterials = [
-  { id: 1, name: 'Mármore Carrara', price: 350 },
-  { id: 2, name: 'Granito Preto São Gabriel', price: 280 },
-  { id: 3, name: 'Quartzo Branco', price: 420 },
-];
-
-// Mock order data - would come from an API
-const getMockOrder = (id: string) => {
-  return {
-    id: parseInt(id),
-    customerId: 1,
-    date: '2023-10-15',
-    status: 'Em Andamento',
-    items: [
-      { id: 1, materialId: 1, description: 'Bancada de cozinha', length: 2.5, width: 0.6, quantity: 1, price: 525 },
-      { id: 2, materialId: 2, description: 'Soleira', length: 1.2, width: 0.2, quantity: 2, price: 134.4 },
-    ],
-    shippingCost: 150,
-    installationCost: 300,
-    discount: 100,
-    notes: 'Cliente solicitou entrega para o fim de semana.',
-    total: 1009.4
-  };
-};
+import { Printer, Plus, Trash2 } from 'lucide-react';
+import { 
+  getOrderById, 
+  getCustomers, 
+  getMaterials, 
+  getCustomerById,
+  getMaterialById,
+  updateOrder,
+  Customer,
+  Material,
+  Order
+} from '@/lib/dataStore';
 
 const OrderEditPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -48,16 +26,14 @@ const OrderEditPage = () => {
   const { toast } = useToast();
   
   const [isLoading, setIsLoading] = useState(false);
-  const [order, setOrder] = useState<any>(null);
+  const [order, setOrder] = useState<Order | null>(null);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [materials, setMaterials] = useState<Material[]>([]);
+  
   const [customerId, setCustomerId] = useState('');
   const [status, setStatus] = useState('');
   const [notes, setNotes] = useState('');
   const [items, setItems] = useState<any[]>([]);
-  const [newItemMaterial, setNewItemMaterial] = useState('');
-  const [newItemDescription, setNewItemDescription] = useState('');
-  const [newItemLength, setNewItemLength] = useState('');
-  const [newItemWidth, setNewItemWidth] = useState('');
-  const [newItemQuantity, setNewItemQuantity] = useState('1');
   const [shippingCost, setShippingCost] = useState('');
   const [installationCost, setInstallationCost] = useState('');
   const [discount, setDiscount] = useState('');
@@ -68,8 +44,14 @@ const OrderEditPage = () => {
     address: ''
   });
 
+  // New item form states
+  const [newItemMaterial, setNewItemMaterial] = useState('');
+  const [newItemDescription, setNewItemDescription] = useState('');
+  const [newItemLength, setNewItemLength] = useState('');
+  const [newItemWidth, setNewItemWidth] = useState('');
+  const [newItemQuantity, setNewItemQuantity] = useState('1');
+
   useEffect(() => {
-    // Check authentication
     const authUser = localStorage.getItem('authUser');
     if (!authUser) {
       navigate('/login');
@@ -81,20 +63,51 @@ const OrderEditPage = () => {
       return;
     }
 
-    // Fetch order data
+    // Load customers and materials from dataStore
+    setCustomers(getCustomers());
+    setMaterials(getMaterials());
+
+    // Fetch order data from dataStore
     if (id) {
-      const orderData = getMockOrder(id);
-      setOrder(orderData);
-      setCustomerId(orderData.customerId.toString());
-      setStatus(orderData.status);
-      setNotes(orderData.notes);
-      setItems(orderData.items);
-      setShippingCost(orderData.shippingCost?.toString() || '');
-      setInstallationCost(orderData.installationCost?.toString() || '');
-      setDiscount(orderData.discount?.toString() || '');
+      const orderId = parseInt(id);
+      const orderData = getOrderById(orderId);
       
-      // Fetch customer info
-      const customer = mockCustomers.find(c => c.id === orderData.customerId);
+      if (orderData) {
+        setOrder(orderData);
+        setCustomerId(orderData.customerId?.toString() || '');
+        setStatus(orderData.status);
+        setItems(orderData.materials || []);
+        setShippingCost(orderData.shippingCost?.toString() || '');
+        setInstallationCost(orderData.installationCost?.toString() || '');
+        setDiscount(orderData.discount?.toString() || '');
+        
+        // Fetch customer info
+        if (orderData.customerId) {
+          const customer = getCustomerById(orderData.customerId);
+          if (customer) {
+            setCustomerInfo({
+              name: customer.name,
+              phone: customer.phone,
+              email: customer.email,
+              address: customer.address
+            });
+          }
+        }
+      } else {
+        toast({
+          title: "Orçamento não encontrado",
+          description: "O orçamento solicitado não foi encontrado",
+          variant: "destructive",
+        });
+        navigate('/dashboard/orcamentos');
+      }
+    }
+  }, [id, navigate, toast]);
+
+  // Update customer info when customer selection changes
+  useEffect(() => {
+    if (customerId) {
+      const customer = getCustomerById(parseInt(customerId));
       if (customer) {
         setCustomerInfo({
           name: customer.name,
@@ -104,13 +117,11 @@ const OrderEditPage = () => {
         });
       }
     }
-  }, [id, navigate, toast]);
+  }, [customerId]);
 
   const calculateItemPrice = (materialId: number, length: number, width: number, quantity: number) => {
-    const material = mockMaterials.find(m => m.id === materialId);
+    const material = getMaterialById(materialId);
     if (!material) return 0;
-    
-    // Calculate area and total price
     const area = length * width;
     return material.price * area * quantity;
   };
@@ -129,16 +140,18 @@ const OrderEditPage = () => {
     const length = parseFloat(newItemLength);
     const width = parseFloat(newItemWidth);
     const quantity = parseInt(newItemQuantity);
-    const price = calculateItemPrice(materialId, length, width, quantity);
+    const subtotal = calculateItemPrice(materialId, length, width, quantity);
+    const material = getMaterialById(materialId);
 
     const newItem = {
-      id: Date.now(), // Temporary ID
+      id: Date.now(),
       materialId,
+      materialName: material?.name || '',
       description: newItemDescription,
       length,
       width,
       quantity,
-      price
+      subtotal
     };
 
     setItems([...items, newItem]);
@@ -156,26 +169,27 @@ const OrderEditPage = () => {
   };
 
   const calculateSubtotal = () => {
-    return items.reduce((sum, item) => sum + item.price, 0);
+    return items.reduce((sum, item) => sum + (item.subtotal || 0), 0);
   };
 
   const calculateTotal = () => {
     let total = calculateSubtotal();
-    
-    // Add shipping and installation costs
     if (shippingCost) total += parseFloat(shippingCost);
     if (installationCost) total += parseFloat(installationCost);
-    
-    // Subtract discount
     if (discount) total -= parseFloat(discount);
-    
     return total;
+  };
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
   };
 
   const handleSave = () => {
     setIsLoading(true);
     
-    // Validation
     if (!customerId || !status) {
       toast({
         title: "Campos obrigatórios",
@@ -186,20 +200,35 @@ const OrderEditPage = () => {
       return;
     }
 
-    // Simulate API call
-    setTimeout(() => {
+    const customer = getCustomerById(parseInt(customerId));
+    const total = calculateTotal();
+
+    const updatedOrder = updateOrder(parseInt(id || '0'), {
+      customer: customer?.name || '',
+      customerId: parseInt(customerId),
+      status,
+      value: formatCurrency(total),
+      materials: items,
+      shippingCost: shippingCost ? parseFloat(shippingCost) : 0,
+      installationCost: installationCost ? parseFloat(installationCost) : 0,
+      discount: discount ? parseFloat(discount) : 0
+    });
+
+    if (updatedOrder) {
       toast({
         title: "Orçamento atualizado",
         description: "O orçamento foi atualizado com sucesso",
       });
-      setIsLoading(false);
-      navigate('/dashboard');
-    }, 1000);
-  };
-
-  const getMaterialName = (materialId: number) => {
-    const material = mockMaterials.find(m => m.id === materialId);
-    return material ? material.name : 'Material não encontrado';
+      navigate('/dashboard/orcamentos');
+    } else {
+      toast({
+        title: "Erro ao atualizar",
+        description: "Não foi possível atualizar o orçamento",
+        variant: "destructive",
+      });
+    }
+    
+    setIsLoading(false);
   };
 
   const handlePrint = () => {
@@ -213,8 +242,7 @@ const OrderEditPage = () => {
       return;
     }
 
-    // Find customer
-    const customer = mockCustomers.find(c => c.id.toString() === customerId);
+    const customer = customers.find(c => c.id.toString() === customerId);
 
     printWindow.document.write(`
       <!DOCTYPE html>
@@ -339,30 +367,31 @@ const OrderEditPage = () => {
                 <th>Material</th>
                 <th>Dimensões</th>
                 <th>Qtd</th>
-                <th>Valor Unit.</th>
                 <th>Total</th>
               </tr>
             </thead>
             <tbody>
-              ${items.map((item, index) => `
-                <tr>
-                  <td>${index + 1}. ${item.description}</td>
-                  <td>${getMaterialName(item.materialId)}</td>
-                  <td>${item.length}m × ${item.width}m</td>
-                  <td>${item.quantity}</td>
-                  <td>R$ ${(item.price / item.quantity).toFixed(2)}</td>
-                  <td>R$ ${item.price.toFixed(2)}</td>
-                </tr>
-              `).join('')}
+              ${items.map((item, index) => {
+                const material = getMaterialById(item.materialId);
+                return `
+                  <tr>
+                    <td>${index + 1}. ${item.description}</td>
+                    <td>${material?.name || item.materialName || 'Material'}</td>
+                    <td>${item.length}m × ${item.width}m</td>
+                    <td>${item.quantity}</td>
+                    <td>${formatCurrency(item.subtotal || 0)}</td>
+                  </tr>
+                `;
+              }).join('')}
             </tbody>
           </table>
           
           <div class="summary">
-            <div><strong>Subtotal:</strong> R$ ${calculateSubtotal().toFixed(2)}</div>
-            ${shippingCost ? `<div><strong>Frete:</strong> R$ ${parseFloat(shippingCost).toFixed(2)}</div>` : ''}
-            ${installationCost ? `<div><strong>Instalação:</strong> R$ ${parseFloat(installationCost).toFixed(2)}</div>` : ''}
-            ${discount ? `<div><strong>Desconto:</strong> R$ ${parseFloat(discount).toFixed(2)}</div>` : ''}
-            <div class="total"><strong>TOTAL:</strong> R$ ${calculateTotal().toFixed(2)}</div>
+            <div><strong>Subtotal:</strong> ${formatCurrency(calculateSubtotal())}</div>
+            ${shippingCost ? `<div><strong>Frete:</strong> ${formatCurrency(parseFloat(shippingCost))}</div>` : ''}
+            ${installationCost ? `<div><strong>Instalação:</strong> ${formatCurrency(parseFloat(installationCost))}</div>` : ''}
+            ${discount ? `<div><strong>Desconto:</strong> ${formatCurrency(parseFloat(discount))}</div>` : ''}
+            <div class="total"><strong>TOTAL:</strong> ${formatCurrency(calculateTotal())}</div>
           </div>
         </div>
         
@@ -406,7 +435,7 @@ const OrderEditPage = () => {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
           <h1 className="text-2xl font-bold">Editar Orçamento #{id}</h1>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => navigate('/dashboard')}>
+            <Button variant="outline" onClick={() => navigate('/dashboard/orcamentos')}>
               Cancelar
             </Button>
             <Button variant="outline" onClick={handlePrint}>
@@ -433,7 +462,7 @@ const OrderEditPage = () => {
                         <SelectValue placeholder="Selecione um cliente" />
                       </SelectTrigger>
                       <SelectContent>
-                        {mockCustomers.map(customer => (
+                        {customers.map(customer => (
                           <SelectItem key={customer.id} value={customer.id.toString()}>
                             {customer.name}
                           </SelectItem>
@@ -457,28 +486,27 @@ const OrderEditPage = () => {
                   </div>
                 </div>
 
-                {/* Customer Information */}
                 {customerId && (
-                  <Card className="border border-gray-200">
+                  <Card className="border border-border">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm">Informações do Cliente</CardTitle>
                     </CardHeader>
                     <CardContent className="pt-0">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <Label className="text-xs text-gray-500">Nome</Label>
+                          <Label className="text-xs text-muted-foreground">Nome</Label>
                           <p className="text-sm">{customerInfo.name}</p>
                         </div>
                         <div>
-                          <Label className="text-xs text-gray-500">Telefone</Label>
+                          <Label className="text-xs text-muted-foreground">Telefone</Label>
                           <p className="text-sm">{customerInfo.phone}</p>
                         </div>
                         <div>
-                          <Label className="text-xs text-gray-500">Email</Label>
+                          <Label className="text-xs text-muted-foreground">Email</Label>
                           <p className="text-sm">{customerInfo.email}</p>
                         </div>
                         <div>
-                          <Label className="text-xs text-gray-500">Endereço</Label>
+                          <Label className="text-xs text-muted-foreground">Endereço</Label>
                           <p className="text-sm">{customerInfo.address}</p>
                         </div>
                       </div>
@@ -486,40 +514,25 @@ const OrderEditPage = () => {
                   </Card>
                 )}
 
-                <div className="space-y-2">
-                  <Label htmlFor="notes">Observações</Label>
-                  <Input
-                    id="notes"
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Observações adicionais sobre o orçamento"
-                  />
-                </div>
-
-                {/* Additional Cost Fields */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="shippingCost">Valor do Frete (R$)</Label>
+                    <Label htmlFor="shippingCost">Frete (R$)</Label>
                     <Input
                       id="shippingCost"
                       type="number"
-                      step="0.01"
-                      min="0"
                       value={shippingCost}
                       onChange={(e) => setShippingCost(e.target.value)}
-                      placeholder="0.00"
+                      placeholder="0,00"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="installationCost">Valor da Instalação (R$)</Label>
+                    <Label htmlFor="installationCost">Instalação (R$)</Label>
                     <Input
                       id="installationCost"
                       type="number"
-                      step="0.01"
-                      min="0"
                       value={installationCost}
                       onChange={(e) => setInstallationCost(e.target.value)}
-                      placeholder="0.00"
+                      placeholder="0,00"
                     />
                   </div>
                   <div className="space-y-2">
@@ -527,11 +540,9 @@ const OrderEditPage = () => {
                     <Input
                       id="discount"
                       type="number"
-                      step="0.01"
-                      min="0"
                       value={discount}
                       onChange={(e) => setDiscount(e.target.value)}
-                      placeholder="0.00"
+                      placeholder="0,00"
                     />
                   </div>
                 </div>
@@ -543,40 +554,36 @@ const OrderEditPage = () => {
             <CardHeader>
               <CardTitle>Resumo</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex justify-between">
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
                   <span>Subtotal:</span>
-                  <span>R$ {calculateSubtotal().toFixed(2)}</span>
+                  <span>{formatCurrency(calculateSubtotal())}</span>
                 </div>
-                {parseFloat(shippingCost) > 0 && (
-                  <div className="flex justify-between">
+                {shippingCost && (
+                  <div className="flex justify-between text-sm">
                     <span>Frete:</span>
-                    <span>R$ {parseFloat(shippingCost).toFixed(2)}</span>
+                    <span>{formatCurrency(parseFloat(shippingCost))}</span>
                   </div>
                 )}
-                {parseFloat(installationCost) > 0 && (
-                  <div className="flex justify-between">
+                {installationCost && (
+                  <div className="flex justify-between text-sm">
                     <span>Instalação:</span>
-                    <span>R$ {parseFloat(installationCost).toFixed(2)}</span>
+                    <span>{formatCurrency(parseFloat(installationCost))}</span>
                   </div>
                 )}
-                {parseFloat(discount) > 0 && (
-                  <div className="flex justify-between">
+                {discount && (
+                  <div className="flex justify-between text-sm text-destructive">
                     <span>Desconto:</span>
-                    <span>- R$ {parseFloat(discount).toFixed(2)}</span>
+                    <span>-{formatCurrency(parseFloat(discount))}</span>
                   </div>
                 )}
-                <div className="border-t pt-4 flex justify-between font-bold">
-                  <span>Total:</span>
-                  <span>R$ {calculateTotal().toFixed(2)}</span>
+                <div className="border-t pt-2">
+                  <div className="flex justify-between font-bold">
+                    <span>Total:</span>
+                    <span>{formatCurrency(calculateTotal())}</span>
+                  </div>
                 </div>
-                <Button className="w-full" onClick={handleSave} disabled={isLoading}>
-                  {isLoading ? "Salvando..." : "Salvar Orçamento"}
-                </Button>
-                <Button variant="outline" className="w-full" onClick={handlePrint}>
-                  <Printer className="mr-2" size={16} /> Imprimir Orçamento
-                </Button>
               </div>
             </CardContent>
           </Card>
@@ -587,108 +594,109 @@ const OrderEditPage = () => {
             <CardTitle>Itens do Orçamento</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                <div className="md:col-span-3 space-y-2">
-                  <Label htmlFor="material">Material</Label>
-                  <Select value={newItemMaterial} onValueChange={setNewItemMaterial}>
-                    <SelectTrigger id="material">
-                      <SelectValue placeholder="Selecione o material" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {mockMaterials.map(material => (
-                        <SelectItem key={material.id} value={material.id.toString()}>
-                          {material.name} - R$ {material.price.toFixed(2)}/m²
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="md:col-span-3 space-y-2">
-                  <Label htmlFor="description">Descrição</Label>
-                  <Input
-                    id="description"
-                    value={newItemDescription}
-                    onChange={(e) => setNewItemDescription(e.target.value)}
-                    placeholder="Ex: Bancada de cozinha"
-                  />
-                </div>
-                <div className="md:col-span-2 space-y-2">
-                  <Label htmlFor="length">Comprimento (m)</Label>
-                  <Input
-                    id="length"
-                    type="number"
-                    step="0.01"
-                    value={newItemLength}
-                    onChange={(e) => setNewItemLength(e.target.value)}
-                    placeholder="Ex: 2.5"
-                  />
-                </div>
-                <div className="md:col-span-2 space-y-2">
-                  <Label htmlFor="width">Largura (m)</Label>
-                  <Input
-                    id="width"
-                    type="number"
-                    step="0.01"
-                    value={newItemWidth}
-                    onChange={(e) => setNewItemWidth(e.target.value)}
-                    placeholder="Ex: 0.6"
-                  />
-                </div>
-                <div className="md:col-span-1 space-y-2">
-                  <Label htmlFor="quantity">Qtd</Label>
-                  <Input
-                    id="quantity"
-                    type="number"
-                    value={newItemQuantity}
-                    onChange={(e) => setNewItemQuantity(e.target.value)}
-                    placeholder="Ex: 1"
-                  />
-                </div>
-                <div className="md:col-span-1 flex items-end">
-                  <Button className="w-full" onClick={handleAddItem}>Adicionar</Button>
-                </div>
-              </div>
-
-              {items.length === 0 ? (
-                <div className="text-center py-6 text-gray-500">
-                  Nenhum item adicionado ao orçamento
-                </div>
-              ) : (
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-2">Material</th>
-                      <th className="text-left py-2">Descrição</th>
-                      <th className="text-left py-2">Dimensões</th>
-                      <th className="text-left py-2">Qtd</th>
-                      <th className="text-left py-2">Valor</th>
-                      <th className="text-left py-2">Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {items.map((item) => (
-                      <tr key={item.id} className="border-b">
-                        <td className="py-2">{getMaterialName(item.materialId)}</td>
-                        <td className="py-2">{item.description}</td>
-                        <td className="py-2">{item.length}m × {item.width}m</td>
-                        <td className="py-2">{item.quantity}</td>
-                        <td className="py-2">R$ {item.price.toFixed(2)}</td>
-                        <td className="py-2">
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => handleRemoveItem(item.id)}
-                            className="text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600"
-                          >
-                            Remover
-                          </Button>
-                        </td>
+            <div className="space-y-4">
+              {/* Items list */}
+              {items.length > 0 && (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-3 px-2">Material</th>
+                        <th className="text-left py-3 px-2">Descrição</th>
+                        <th className="text-left py-3 px-2">Dimensões</th>
+                        <th className="text-left py-3 px-2">Qtd</th>
+                        <th className="text-left py-3 px-2">Total</th>
+                        <th className="text-left py-3 px-2">Ações</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {items.map((item) => {
+                        const material = getMaterialById(item.materialId);
+                        return (
+                          <tr key={item.id} className="border-b">
+                            <td className="py-3 px-2">{material?.name || item.materialName || 'Material'}</td>
+                            <td className="py-3 px-2">{item.description}</td>
+                            <td className="py-3 px-2">{item.length}m × {item.width}m</td>
+                            <td className="py-3 px-2">{item.quantity}</td>
+                            <td className="py-3 px-2">{formatCurrency(item.subtotal || 0)}</td>
+                            <td className="py-3 px-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleRemoveItem(item.id)}
+                              >
+                                <Trash2 size={16} className="text-destructive" />
+                              </Button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               )}
+
+              {/* Add new item form */}
+              <div className="border rounded-lg p-4 space-y-4">
+                <h4 className="font-medium">Adicionar Item</h4>
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                  <div className="space-y-2">
+                    <Label>Material</Label>
+                    <Select value={newItemMaterial} onValueChange={setNewItemMaterial}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {materials.map(material => (
+                          <SelectItem key={material.id} value={material.id.toString()}>
+                            {material.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Descrição</Label>
+                    <Input
+                      value={newItemDescription}
+                      onChange={(e) => setNewItemDescription(e.target.value)}
+                      placeholder="Ex: Bancada"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Comp. (m)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={newItemLength}
+                      onChange={(e) => setNewItemLength(e.target.value)}
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Larg. (m)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={newItemWidth}
+                      onChange={(e) => setNewItemWidth(e.target.value)}
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Qtd</Label>
+                    <Input
+                      type="number"
+                      value={newItemQuantity}
+                      onChange={(e) => setNewItemQuantity(e.target.value)}
+                      placeholder="1"
+                    />
+                  </div>
+                </div>
+                <Button onClick={handleAddItem} variant="outline">
+                  <Plus size={16} className="mr-2" /> Adicionar Item
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
